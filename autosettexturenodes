@@ -1,6 +1,17 @@
 import bpy
 import os
 
+def load_and_connect_image(image_node, image_path, color_space='Non-Color'):
+    try:
+        image = bpy.data.images.load(image_path, check_existing=True)
+        if image:
+            image_node.image = image
+            image_node.image.colorspace_settings.name = color_space
+            return True
+    except Exception as e:
+        print(f"Failed to load image {image_path}: {e}")
+    return False
+
 def add_and_connect_texture_nodes(material, texture_folder, texture_base_name):
     # Check if the material has a node tree
     if material.node_tree:
@@ -16,39 +27,35 @@ def add_and_connect_texture_nodes(material, texture_folder, texture_base_name):
         roughness_path = os.path.join(texture_folder, f"{texture_base_name}_g.jpg")
         normal_map_path = os.path.join(texture_folder, f"{texture_base_name}_n.jpg")
 
-        # Load images with error handling
-        try:
-            base_color_1_node.image = bpy.data.images.load(base_color_1_path, check_existing=True)
-            base_color_2_node.image = bpy.data.images.load(base_color_2_path, check_existing=True)
-            roughness_node.image = bpy.data.images.load(roughness_path, check_existing=True)
-            normal_map_node.image = bpy.data.images.load(normal_map_path, check_existing=True)
-        except Exception as e:
-            print(f"Failed to load one or more texture images: {e}")
+        # Load and connect images
+        principled_bsdf = None  # Initialize principled_bsdf outside the if statement
+        if load_and_connect_image(base_color_1_node, base_color_1_path):
+            load_and_connect_image(base_color_2_node, base_color_2_path)
+        if load_and_connect_image(roughness_node, roughness_path):
+            # Create and connect nodes for combining base colors
+            mix_color_node = material.node_tree.nodes.new(type='ShaderNodeMixRGB')
+            material.node_tree.links.new(base_color_1_node.outputs["Color"], mix_color_node.inputs[1])
+            material.node_tree.links.new(base_color_2_node.outputs["Color"], mix_color_node.inputs[2])
 
-        # Set color space to Non-Color for normal and roughness nodes
-        for node in [normal_map_node, roughness_node]:
-            if node.image:
-                node.image.colorspace_settings.name = 'Non-Color'
+            # Add a ShaderNodeInvert node for the "_g" texture node
+            invert_node = material.node_tree.nodes.new(type='ShaderNodeInvert')
+            material.node_tree.links.new(roughness_node.outputs["Color"], invert_node.inputs["Color"])
 
-        # Create and connect nodes for combining base colors
-        mix_color_node = material.node_tree.nodes.new(type='ShaderNodeMixRGB')
-        material.node_tree.links.new(base_color_1_node.outputs["Color"], mix_color_node.inputs[1])
-        material.node_tree.links.new(base_color_2_node.outputs["Color"], mix_color_node.inputs[2])
+            # Connect nodes to Principled BSDF shader
+            principled_bsdf = material.node_tree.nodes.get("Principled BSDF")
+            if principled_bsdf:
+                material.node_tree.links.new(mix_color_node.outputs["Color"], principled_bsdf.inputs["Base Color"])
+                material.node_tree.links.new(invert_node.outputs["Color"], principled_bsdf.inputs["Roughness"])
 
-        # Add a ShaderNodeInvert node for the "_g" texture node
-        invert_node = material.node_tree.nodes.new(type='ShaderNodeInvert')
-        material.node_tree.links.new(roughness_node.outputs["Color"], invert_node.inputs["Color"])
+        load_and_connect_image(normal_map_node, normal_map_path, color_space='Non-Color')
+        if normal_map_node.image:
+            # Add a ShaderNodeNormalMap node for the normal map
+            normal_map_shader_node = material.node_tree.nodes.new(type='ShaderNodeNormalMap')
+            material.node_tree.links.new(normal_map_node.outputs["Color"], normal_map_shader_node.inputs["Color"])
 
-        # Add a ShaderNodeNormalMap node for the normal map
-        normal_map_shader_node = material.node_tree.nodes.new(type='ShaderNodeNormalMap')
-        material.node_tree.links.new(normal_map_node.outputs["Color"], normal_map_shader_node.inputs["Color"])
-
-        # Connect nodes to Principled BSDF shader
-        principled_bsdf = material.node_tree.nodes.get("Principled BSDF")
-        if principled_bsdf:
-            material.node_tree.links.new(mix_color_node.outputs["Color"], principled_bsdf.inputs["Base Color"])
-            material.node_tree.links.new(invert_node.outputs["Color"], principled_bsdf.inputs["Roughness"])
-            material.node_tree.links.new(normal_map_shader_node.outputs["Normal"], principled_bsdf.inputs["Normal"])
+            # Connect nodes to Principled BSDF shader
+            if principled_bsdf and normal_map_shader_node:
+                material.node_tree.links.new(normal_map_shader_node.outputs["Normal"], principled_bsdf.inputs["Normal"])
 
 def main():
     # Specify the folder and base name for the textures
