@@ -1,0 +1,35 @@
+import bpy
+import os
+
+def update_texture_paths():
+    # Get the active object (assuming it's the last imported FBX)
+    active_object = bpy.context.active_object
+
+    # Check if the active object is a mesh
+    if active_object and active_object.type == 'MESH':
+        # Get the path of the imported FBX file
+        fbx_file_path = bpy.path.abspath(active_object.data.filepath)
+
+        # Get the directory of the FBX file
+        fbx_file_directory = os.path.dirname(fbx_file_path)
+
+        # Iterate through all materials of the object
+        for material_slot in active_object.material_slots:
+            material = material_slot.material
+
+            # Iterate through all nodes in the material
+            for node in material.node_tree.nodes:
+                if node.type == 'TEX_IMAGE':
+                    # Update the texture node's file path
+                    old_path = bpy.path.abspath(node.image.filepath)
+                    new_path = os.path.relpath(old_path, fbx_file_directory)
+                    node.image.filepath = new_path
+
+    else:
+        print("No valid mesh object found. Make sure an FBX file has been imported.")
+
+def main():
+    update_texture_paths()
+
+if __name__ == "__main__":
+    main()
