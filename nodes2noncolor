@@ -1,0 +1,24 @@
+import bpy
+
+def change_color_space_to_non_color():
+    # Iterate through all materials in the scene
+    for material in bpy.data.materials:
+        # Check if the material has a node tree
+        if material.node_tree:
+            # Iterate through all nodes in the material node tree
+            for node in material.node_tree.nodes:
+                # Check if the node is a texture node
+                if node.type == 'TEX_IMAGE':
+                    # Check if the texture node is used as the color input for the Principled BSDF shader
+                    is_base_color_input = any(link.to_node.type == 'BSDF_PRINCIPLED' and link.to_socket.name == 'Base Color' for link in material.node_tree.links if link.from_node == node)
+
+                    # Set the color space to Non-Color for non-Base Color nodes
+                    if not is_base_color_input:
+                        node.image.colorspace_settings.name = 'Non-Color'
+
+def main():
+    change_color_space_to_non_color()
+
+if __name__ == "__main__":
+    main()
+	
