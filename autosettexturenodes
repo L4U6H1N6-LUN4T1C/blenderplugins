@@ -29,9 +29,9 @@ def add_and_connect_texture_nodes(material, texture_folder, texture_base_name):
 
         # Load and connect images
         principled_bsdf = None  # Initialize principled_bsdf outside the if statement
-        if load_and_connect_image(base_color_1_node, base_color_1_path):
-            load_and_connect_image(base_color_2_node, base_color_2_path)
-        if load_and_connect_image(roughness_node, roughness_path):
+        if load_and_connect_image(base_color_1_node, base_color_1_path, color_space='sRGB'):
+            load_and_connect_image(base_color_2_node, base_color_2_path, color_space='sRGB')
+        if load_and_connect_image(roughness_node, roughness_path, color_space='Non-Color'):
             # Create and connect nodes for combining base colors
             mix_color_node = material.node_tree.nodes.new(type='ShaderNodeMixRGB')
             material.node_tree.links.new(base_color_1_node.outputs["Color"], mix_color_node.inputs[1])
