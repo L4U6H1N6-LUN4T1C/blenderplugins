@@ -1,0 +1,15 @@
+import bpy
+
+def disable_auto_smooth():
+    # Iterate through all objects in the scene
+    for obj in bpy.context.scene.objects:
+        # Check if the object is a mesh
+        if obj.type == 'MESH':
+            # Access the object data (mesh) and disable auto smooth
+            obj.data.use_auto_smooth = False
+
+def main():
+    disable_auto_smooth()
+
+if __name__ == "__main__":
+    main()
