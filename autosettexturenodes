@@ -16,14 +16,19 @@ def add_and_connect_texture_nodes(material, texture_folder, texture_base_name):
         roughness_path = os.path.join(texture_folder, f"{texture_base_name}_g.jpg")
         normal_map_path = os.path.join(texture_folder, f"{texture_base_name}_n.jpg")
 
-        base_color_1_node.image = bpy.data.images.load(base_color_1_path, check_existing=True)
-        base_color_2_node.image = bpy.data.images.load(base_color_2_path, check_existing=True)
-        roughness_node.image = bpy.data.images.load(roughness_path, check_existing=True)
-        normal_map_node.image = bpy.data.images.load(normal_map_path, check_existing=True)
+        # Load images with error handling
+        try:
+            base_color_1_node.image = bpy.data.images.load(base_color_1_path, check_existing=True)
+            base_color_2_node.image = bpy.data.images.load(base_color_2_path, check_existing=True)
+            roughness_node.image = bpy.data.images.load(roughness_path, check_existing=True)
+            normal_map_node.image = bpy.data.images.load(normal_map_path, check_existing=True)
+        except Exception as e:
+            print(f"Failed to load one or more texture images: {e}")
 
         # Set color space to Non-Color for normal and roughness nodes
         for node in [normal_map_node, roughness_node]:
-            node.image.colorspace_settings.name = 'Non-Color'
+            if node.image:
+                node.image.colorspace_settings.name = 'Non-Color'
 
         # Create and connect nodes for combining base colors
         mix_color_node = material.node_tree.nodes.new(type='ShaderNodeMixRGB')
