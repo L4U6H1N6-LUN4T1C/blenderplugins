@@ -1,0 +1,4 @@
+import bpy
+for img in bpy.data.images:
+    img.filepath = img.filepath.replace('.jpg', '.png')
+    img.reload()
